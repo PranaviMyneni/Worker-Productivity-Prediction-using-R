@@ -1,0 +1,555 @@
+---
+title: "Garment Industry Productivity Prediction"
+author: "Pranavi Myneni"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Reading the dataset and displaying the first few rows
+```{r}
+data<-  read.csv("C:/Users/pmhyd/Desktop/Notes/UIUC_notes/IS507/R-project/garments_worker_productivity.csv",  header 
+= TRUE, as.is = TRUE) 
+head(data)
+```
+# DATA PRE-PROCESSING
+
+#Checking for null values
+```{r}
+colSums(is.na(data))
+```
+#Remove WIP column from the dataset
+```{r}
+data$wip <- NULL
+head(data)
+```
+# Check for skewness of actual_productivity
+```{r}
+hist(data$actual_productivity, main = "Histogram of Actual Productivity", xlab = "Productivity")
+shapiro.test(data$actual_productivity)  # If p-value < 0.05, data is non-normal
+```
+# the histogram for productivity as seen above is left skewed.Checking for skewness for no.of workers as well.
+```{r}
+hist(data$no_of_workers, main="Histogram of No.of workers",xlab="Number of workers")
+shapiro.test(data$no_of_workers)
+```
+#cannot determine if the data is right or left skewed from the histogram. using Q-Q plot to determine that.
+```{r}
+qqnorm(data$no_of_workers)
+qqline(data$no_of_workers)
+```
+#from the Q-Qplot, we can determine that the data is right skewed.
+#Applying log transformations for normality
+```{r}
+# Multiplying by 100 scales the data so that the log-transformed values are more interpretable.
+data$log_productivity <- log(data$actual_productivity * 100)
+data$log_no_of_workers <- log(data$no_of_workers)
+
+```
+
+#converting categorical values to features
+```{r}
+data$team <- as.factor(data$team)
+data$quarter <- as.factor(data$quarter)
+data$department <- as.factor(data$department)
+data$day <- as.factor(data$day)
+head(data)
+```
+
+```{r}
+data$percentage_achievement <- (data$actual_productivity - data$targeted_productivity)/data$targeted_productivity * 100
+head(data)
+```
+
+```{r}
+levels(data$department) <- c("finishing", "finishing", "sewing")
+head(data)
+```
+
+#EXPLORATORY DATA ANALYSIS
+
+```{r}
+# Plotting histogram for actual_productivity
+hist(data$actual_productivity, xlab = "Actual Productivity", main = "Histogram of Actual Productivity", col = 'darkturquoise')
+
+# Plotting histogram for log_productivity
+hist(data$log_productivity, xlab = "Log of Productivity", main = "Histogram of Log Productivity", col = 'deeppink4')
+
+```
+```{r}
+# Plotting histogram for number of workers
+hist(data$no_of_workers, xlab = "No. of Workers", main = "Histogram of No. of Workers", col = 'darkorange1')
+
+# Plotting histogram for log number of workers
+hist(data$log_no_of_workers, xlab = "Log No. of Workers", main = "Histogram of Log No. of Workers", col = 'aquamarine3')
+
+```
+#Creating a box plot of log productivity by each quarter
+```{r}
+boxplot(log_productivity~quarter,data=data,main="Different boxplots for each quarter", xlab="Quarter", ylab="Log Productivity", col="mediumpurple", border="black")
+```
+
+#Summarizing mean and standard deviation of every quarter group
+```{r}
+library(dplyr)
+group_by(data, quarter) %>%
+  summarise(
+    count = n(),
+    mean = mean(log_productivity, na.rm = TRUE),
+    sd = sd(log_productivity, na.rm = TRUE),
+    q1 = quantile(log_productivity, 0.25),
+    median = quantile(log_productivity, 0.50),
+    q3 = quantile(log_productivity, 0.75),
+    minimum = min(log_productivity),
+    maximum = max(log_productivity)
+  )
+
+
+```
+```{r}
+q1_lp <- data$log_productivity[data$quarter=='Quarter1']
+q2_lp <- data$log_productivity[data$quarter=='Quarter2']
+q3_lp <- data$log_productivity[data$quarter=='Quarter3']
+q4_lp <- data$log_productivity[data$quarter=='Quarter4']
+q5_lp <- data$log_productivity[data$quarter=='Quarter5']
+```
+
+#to compare productivity between different quarters- use t-test
+```{r}
+#t-test
+# Perform t-test between Quarter1 and Quarter2 log_productivity
+t_test_q1_q2 <- t.test(q1_lp, q2_lp)
+print(t_test_q1_q2)
+```
+
+```{r}
+# Perform t-test between Quarter1 and Quarter3 log_productivity
+t_test_q1_q3 <- t.test(q1_lp, q3_lp)
+print(t_test_q1_q3)
+```
+```{r}
+# Perform t-test between Quarter1 and Quarter4 log_productivity
+t_test_q1_q4 <- t.test(q1_lp, q4_lp)
+print(t_test_q1_q4)
+```
+
+```{r}
+# Perform t-test between Quarter1 and Quarter5 log_productivity
+t_test_q1_q5 <- t.test(q1_lp, q5_lp)
+print(t_test_q1_q5)
+```
+```{r}
+# Perform t-test between Quarter2 and Quarter3 log_productivity
+t_test_q2_q3 <- t.test(q2_lp, q3_lp)
+print(t_test_q2_q3)
+```
+```{r}
+# Perform t-test between Quarter2 and Quarter4 log_productivity
+t_test_q2_q4 <- t.test(q2_lp, q4_lp)
+print(t_test_q2_q4)
+```
+
+```{r}
+# Perform t-test between Quarter2 and Quarter5 log_productivity
+t_test_q2_q5 <- t.test(q2_lp, q5_lp)
+print(t_test_q2_q5)
+```
+```{r}
+# Perform t-test between Quarter3 and Quarter4 log_productivity
+t_test_q3_q4 <- t.test(q3_lp, q4_lp)
+print(t_test_q3_q4)
+```
+```{r}
+# Perform t-test between Quarter4 and Quarter5 log_productivity
+t_test_q4_q5 <- t.test(q4_lp, q5_lp)
+print(t_test_q4_q5)
+```
+```{r}
+# Perform t-test between Quarter3 and Quarter5 log_productivity
+t_test_q3_q5 <- t.test(q3_lp, q5_lp)
+print(t_test_q3_q5)
+```
+#compare productivity using ANOVA testing and use Post-hoc Test (Tukey's HSD) to find out the quarters that have significant difference
+```{r}
+# One-way ANOVA to compare log_productivity across quarters
+anova_quarters <- aov(log_productivity ~ quarter, data = data)
+summary(anova_quarters)
+```
+```{r}
+# Tukey's HSD test to identify which quarters differ
+tukey_test_quarters <- TukeyHSD(anova_quarters)
+print(tukey_test_quarters)
+```
+#Creating a box plot of log productivity by each department
+```{r}
+boxplot(log_productivity~department, data=data, main="Different boxplots for each department",xlab="Department", ylab="Log Productivity", col="mediumpurple", border="black")
+
+##Summarizing mean and standard deviation of every department group
+group_by(data, department) %>%
+  summarise(
+    count = n(),
+    mean = mean(log_productivity, na.rm = TRUE),
+    sd = sd(log_productivity, na.rm = TRUE),
+    q1 = quantile(log_productivity, 0.25),
+    median = quantile(log_productivity, 0.50),
+    q3 = quantile(log_productivity, 0.75),
+    minimum = min(log_productivity),
+    maximum = max(log_productivity)
+  )
+
+#Creating variables and subsetting log productivity values based on each department
+deptf_lp <- data$log_productivity[data$department=='finishing']
+depts_lp <- data$log_productivity[data$department=='sewing']
+```
+# t-test to compare log_productivity across departments
+```{r}
+t_test_depts <- t.test(deptf_lp, depts_lp)
+print(t_test_depts)
+```
+```{r}
+data$day <- factor(data$day , levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+```
+
+#Creating a box plot of log productivity by each day
+```{r}
+boxplot(log_productivity~day,data=data,main="Different boxplots for each day", xlab="Day", ylab="Log Productivity", col="mediumpurple", border="black", levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+
+##Summarizing mean and standard deviation of every department group
+group_by(data, day) %>%
+  summarise(
+    count = n(),
+    mean = mean(log_productivity, na.rm = TRUE),
+    sd = sd(log_productivity, na.rm = TRUE),
+    q1 = quantile(log_productivity, 0.25),
+    median = quantile(log_productivity, 0.50),
+    q3 = quantile(log_productivity, 0.75),
+    minimum = min(log_productivity),
+    maximum = max(log_productivity)
+  )
+```
+# One-way ANOVA to compare log_productivity across days
+```{r}
+anova_days <- aov(log_productivity ~ day, data=data)
+summary(anova_days)
+```
+#Creating a box plot of log productivity by no of style change
+```{r}
+
+boxplot(log_productivity~no_of_style_change,data=data,main="Different boxplots for no of style change", xlab="No of Style Change", ylab="Log Productivity", col="mediumpurple", border="black")
+
+#Summarizing mean and standard deviation of every group based on no_of_style_change
+group_by(data, no_of_style_change) %>%
+  summarise(
+    count = n(),
+    mean = mean(log_productivity, na.rm = TRUE),
+    sd = sd(log_productivity, na.rm = TRUE),
+    q1 = quantile(log_productivity, 0.25),
+    median = quantile(log_productivity, 0.50),
+    q3 = quantile(log_productivity, 0.75),
+    minimum = min(log_productivity),
+    maximum = max(log_productivity)
+  )
+
+```
+# One-way ANOVA to compare log_productivity across style 
+```{r}
+data$no_of_style_change <- as.factor(data$no_of_style_change)
+
+anova_style <- aov(log_productivity ~ no_of_style_change, data=data)
+summary(anova_style)
+```
+```{r}
+# Tukey's HSD test to identify which quarters differ
+tukey_test_style <- TukeyHSD(anova_style)
+print(tukey_test_style)
+```
+#Creating scatterplots to understand the relation between productivity and other features
+```{r}
+#Importing ggplot for plotting scatterplot
+library(ggplot2)
+
+#Plotting the scatterplot of natural log of no_of_workers +1 on the x axis against natural log of productivity on the y-axis
+ggplot(data, aes(x = log(no_of_workers + 1), y = log_productivity)) +
+  geom_point(color = "#071277") + 
+  geom_smooth(method = "lm", se = FALSE, color = "red", linewidth = 0.5) +
+  theme_classic() +
+  labs(title = "Log No. of Workers vs. Log Productivity",
+       x = "Log of No. of Workers",
+       y = "Log Productivity") + 
+  theme(
+    plot.title = element_text(color = "#0099f9", size = 15, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(color = "#0099f9", size = 10),
+    axis.title.y = element_text(color = "#0099f9", size = 10)
+  )
+
+#Obtaining correlation coefficient
+cor(log(data$no_of_workers + 1), data$log_productivity)
+```
+```{r}
+#Importing ggplot for plotting scatterplot
+library(ggplot2)
+
+#Plotting the scatterplot of natural log of incetive +1 on the x axis against natural log of productivity on the y-axis
+ggplot(data, aes(x = log(incentive + 1), y = log_productivity)) +
+  geom_point(color = "#071277") + 
+  geom_smooth(method = "lm", se = FALSE, color = "red", linewidth = 0.5) +
+  theme_classic() +
+  labs(title = "Log Incentive vs. Log Productivity",
+       x = "Log Incentive",
+       y = "Log Productivity") + 
+  theme(
+    plot.title = element_text(color = "#0099f9", size = 15, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(color = "#0099f9", size = 10),
+    axis.title.y = element_text(color = "#0099f9", size = 10)
+  )
+
+#Obtaining correlation coefficient
+cor(log(data$incentive + 1), data$log_productivity)
+```
+```{r}
+#Importing ggplot for plotting scatterplot
+library(ggplot2)
+
+#Plotting the scatterplot of natural log of overtime +1 on the x axis against natural log of productivity on the y-axis
+ggplot(data, aes(x = log(over_time + 1), y = log_productivity)) +
+  geom_point(color = "#071277") + 
+  geom_smooth(method = "lm", se = FALSE, color = "red", linewidth = 0.5) +
+  theme_classic() +
+  labs(title = "Log Overtime vs. Log Productivity",
+       x = "Log Overtime",
+       y = "Log Productivity") + 
+  theme(
+    plot.title = element_text(color = "#0099f9", size = 15, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(color = "#0099f9", size = 10),
+    axis.title.y = element_text(color = "#0099f9", size = 10)
+  )
+
+#Obtaining correlation coefficient
+cor(log(data$over_time + 1), data$log_productivity)
+```
+
+```{r}
+#Importing ggplot for plotting scatterplot
+library(ggplot2)
+
+#Plotting the scatterplot of natural log of no_of_workers +1 on the x axis against natural log of productivity on the y-axis
+ggplot(data, aes(x = percentage_achievement, y = log_productivity)) +
+  geom_point(color = "#071277") + 
+  geom_smooth(method = "lm", se = FALSE, color = "red", linewidth = 0.5) +
+  theme_classic() +
+  labs(title = "Percentage Achievement vs. Log Productivity",
+       x = "Percentage Achievement",
+       y = "Log Productivity") + 
+  theme(
+    plot.title = element_text(color = "#0099f9", size = 15, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(color = "#0099f9", size = 10),
+    axis.title.y = element_text(color = "#0099f9", size = 10)
+  )
+
+#Obtaining correlation coefficient
+cor(data$percentage_achievement, data$log_productivity)
+```
+
+```{r}
+#Importing ggplot for plotting scatterplot
+library(ggplot2)
+
+#Plotting the scatterplot of natural log of no_of_workers +1 on the x axis against natural log of productivity on the y-axis
+ggplot(data, aes(x = log(incentive + 1), y = percentage_achievement)) +
+  geom_point(color = "#071277") + 
+  geom_smooth(method = "lm", se = FALSE, color = "red", linewidth = 0.5) +
+  theme_classic() +
+  labs(title = "Log Incentive vs. Percentage Achievement",
+       x = "Log Incentive",
+       y = "Percentage Achievement") + 
+  theme(
+    plot.title = element_text(color = "#0099f9", size = 15, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(color = "#0099f9", size = 10),
+    axis.title.y = element_text(color = "#0099f9", size = 10)
+  )
+
+#Obtaining correlation coefficient
+cor(log(data$incentive + 1), data$percentage_achievement)
+```
+
+#MODEL ANALYSIS
+
+```{r}
+# Linear regression 
+model_linear <- lm(log_productivity ~ log(no_of_workers + 1) + log(incentive + 1) + quarter+ log(targeted_productivity) + over_time + no_of_style_change + department + day + team, data = data)
+summary(model_linear)
+
+```
+```{r}
+# Decision treee algorithm
+# install.packages("rpart")
+
+# Load the rpart package
+library(rpart)
+
+# Create a decision tree model
+model_tree <- rpart(log_productivity ~ log(no_of_workers + 1) + log(incentive + 1) + quarter + log(targeted_productivity) + over_time + no_of_style_change + department + day + team, 
+                    data = data, 
+                    method = "anova")  # "anova" for continuous target variable
+
+# Print the decision tree structure
+print(model_tree)
+
+# Plot the decision tree
+plot(model_tree, uniform = TRUE, margin = 0.1)
+text(model_tree, use.n = TRUE, cex = 0.8)
+```
+```{r}
+# Install the randomForest package
+install.packages("randomForest")
+
+# Load the randomForest package
+library(randomForest)
+```
+
+```{r}
+data$log_incentive <- log(data$incentive + 1)
+data$log_targeted_productivity <- log(data$targeted_productivity)
+```
+
+```{r}
+
+# Fit the random forest model
+model_rf <- randomForest(log_productivity ~ log_no_of_workers + log_incentive + quarter + log_targeted_productivity + over_time + no_of_style_change + department + day + team, data = data)
+
+# Check feature importance
+importance(model_rf)
+
+# Plot the importance of features
+varImpPlot(model_rf)
+```
+#Plotting residual against fitted values
+```{r}
+
+library(ggplot2)
+
+#Plotting the residuals against the fitted plot
+ggplot(data, aes(x = fitted(model_linear), y = resid(model_linear))) +
+  geom_point(color = "#071277") + 
+  geom_hline(yintercept=0, color = "Red", size = 0.5) + 
+  theme_classic() +
+  labs(title = "Residuals vs. Fitted Values",
+       x = "Fitted Values",
+       y = "Residuals") + 
+  theme(
+    plot.title = element_text(color = "#0099f9", size = 15, face = "bold", hjust = 0.5),
+    axis.title.x = element_text(color = "#0099f9", size = 10),
+    axis.title.y = element_text(color = "#0099f9", size = 10)
+  )
+```
+
+
+#PERFORMANCE EVALUATION
+```{r}
+# Set seed for reproducibility
+set.seed(123)
+
+# Split data into 70% training and 30% test sets
+train_index <- sample(1:nrow(data), 0.7 * nrow(data))  # 70% training
+train_data <- data[train_index, ]
+test_data <- data[-train_index, ]
+
+```
+
+```{r}
+# Train linear regression model
+model_lm <- lm(log_productivity ~ log_no_of_workers + log_incentive + quarter + log_targeted_productivity + over_time + no_of_style_change + department + day + team, 
+               data = train_data)
+
+# Make predictions on the test data
+predictions_lm <- predict(model_lm, newdata = test_data)
+
+```
+
+
+```{r}
+
+library(rpart)
+# Train decision tree model
+model_tree <- rpart(log_productivity ~ log_no_of_workers + log_incentive + quarter + log_targeted_productivity + over_time + no_of_style_change + department + day + team, 
+                    data = train_data)
+
+# Make predictions on the test data
+predictions_tree <- predict(model_tree, newdata = test_data)
+```
+
+
+```{r}
+
+library(randomForest)
+#Train random forest model
+model_rf <- randomForest(log_productivity ~ log_no_of_workers + log_incentive + quarter + log_targeted_productivity + over_time + no_of_style_change + department + day + team, 
+                         data = train_data)
+
+# Make predictions on the test data
+predictions_rf <- predict(model_rf, newdata = test_data)
+```
+
+```{r}
+rmse <- function(actual, predicted) {
+  sqrt(mean((actual - predicted)^2))
+}
+
+# RMSE for Linear Regression
+rmse_lm <- rmse(test_data$log_productivity, predictions_lm)
+
+# RMSE for Decision Tree
+rmse_tree <- rmse(test_data$log_productivity, predictions_tree)
+
+# RMSE for Random Forest
+rmse_rf <- rmse(test_data$log_productivity, predictions_rf)
+```
+
+```{r}
+# Function to calculate MAE
+mae <- function(actual, predicted) {
+  mean(abs(actual - predicted))
+}
+
+# MAE for Linear Regression
+mae_lm <- mae(test_data$log_productivity, predictions_lm)
+
+# MAE for Decision Tree
+mae_tree <- mae(test_data$log_productivity, predictions_tree)
+
+# MAE for Random Forest
+mae_rf <- mae(test_data$log_productivity, predictions_rf)
+
+# Function to calculate R-squared
+r_squared <- function(actual, predicted) {
+  SSE <- sum((predicted - actual)^2)  # Sum of squared errors
+  SST <- sum((actual - mean(actual))^2)  # Total sum of squares
+  1 - (SSE / SST)
+}
+
+# R-squared for Linear Regression
+r_squared_lm <- r_squared(test_data$log_productivity, predictions_lm)
+
+# R-squared for Decision Tree
+r_squared_tree <- r_squared(test_data$log_productivity, predictions_tree)
+
+# R-squared for Random Forest
+r_squared_rf <- r_squared(test_data$log_productivity, predictions_rf)
+```
+
+```{r}
+# Create a summary table of model performance
+performance <- data.frame(
+  Model = c("Linear Regression", "Decision Tree", "Random Forest"),
+  RMSE = c(rmse_lm, rmse_tree, rmse_rf),
+  MAE = c(mae_lm, mae_tree, mae_rf),
+  R_squared = c(r_squared_lm, r_squared_tree, r_squared_rf)
+)
+
+# Print the performance summary
+print(performance)
+
+```
+
